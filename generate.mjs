@@ -22,6 +22,7 @@ const LABELS = (await fs.readFile("labels.csv", "utf8")).
     x[4] = +x[4];
     return x;
   });
+const CONSTELLATIONS = JSON.parse(await fs.readFile("constellations.lines.min.geojson", "utf8"));
 
 const e = 23.435;
 const cos_e = Math.cos(e * Math.PI / 180);
@@ -91,6 +92,22 @@ for(const [name, ra, dec, u, v] of LABELS) {
     v,
     name,
   );
+}
+
+for(const {geometry: {coordinates: lines}} of CONSTELLATIONS.features) {
+  let d = "";
+
+  for(const line of lines) {
+    d += "M";
+    for(const [ra, dec] of line) {
+      const x = w / 2 + Math.cos(ra * Math.PI / 180) * r * (90 - dec) / (180 - LATITUDE);
+      const y = h / 2 + Math.sin(ra * Math.PI / 180) * r * (90 - dec) / (180 - LATITUDE);
+
+      d += " " + x + " " + y;
+    }
+  }
+
+  console.log("<path d=\"%s\" fill=\"none\" stroke=\"black\" stroke-width=\"0.25\"/>", d);
 }
 
 console.log("</svg>");
