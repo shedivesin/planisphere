@@ -37,7 +37,6 @@ function horizontal_to_equatorial(azi, alt) {
 
 function equatorial_to_cartesian(ra, dec) {
   // Polar azimuthal.
-  // FIXME: Try stereographic?
   return [
     w / 2 + Math.cos(ra * Math.PI / 12) * (r - p) * (90 - dec) / (180 - lat),
     h / 2 + Math.sin(ra * Math.PI / 12) * (r - p) * (90 - dec) / (180 - lat),
@@ -93,6 +92,18 @@ console.log("<circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"white\" stroke=\"black\
   console.log("<path d=\"%s\" fill=\"none\" stroke=\"black\" stroke-width=\"0.5\"/>", d);
 }
 
+// Gates
+for(const lon of [90.02, 270.02]) {
+  const [ra, dec] = ecliptic_to_equatorial(lon, 0);
+  const [x, y] = equatorial_to_cartesian(ra, dec);
+
+  console.log(
+    "<circle cx=\"%d\" cy=\"%d\" r=\"1.5\" fill=\"white\" stroke=\"black\" stroke-width=\"0.5\"/>",
+    x,
+    y,
+  );
+}
+
 // Ecliptic markers.
 for(let lon = 0; lon < 360; lon++) {
   const [ra, dec] = ecliptic_to_equatorial(lon, 0);
@@ -116,6 +127,7 @@ for(const [mag, ra, dec] of STARS) {
   console.log("<circle cx=\"%d\" cy=\"%d\" r=\"%d\"/>", x, y, s);
 }
 
+// Labels
 for(const [name, ra, dec, u, v] of LABELS) {
   const [x, y] = equatorial_to_cartesian(ra, dec);
   console.log(
@@ -132,16 +144,9 @@ for(const [name, ra, dec, u, v] of LABELS) {
 {
   let d = "M";
 
-  for(let az = 0; az < 360; az++) {
-    const cos_al = Math.cos(0);
-    const sin_al = Math.sin(0);
-    const tan_al = sin_al / cos_al;
-    const cos_az = Math.cos(az * Math.PI / 180);
-    const sin_az = Math.sin(az * Math.PI / 180);
-    const ra = lst - Math.atan2(sin_az, cos_az * sin_lat + tan_al * cos_lat) * 12 / Math.PI;
-    const dec = Math.asin(sin_lat * sin_al - cos_lat * cos_al * cos_az) * 180 / Math.PI;
-    const x = w / 2 + Math.cos(ra * Math.PI / 12) * (r - p) * (90 - dec) / (180 - lat);
-    const y = h / 2 + Math.sin(ra * Math.PI / 12) * (r - p) * (90 - dec) / (180 - lat);
+  for(let azi = 0; azi < 360; azi++) {
+    const [ra, dec] = horizontal_to_equatorial(azi, 0);
+    const [x, y] = equatorial_to_cartesian(ra, dec);
     d += " " + x + " " + y;
   }
 
