@@ -75,7 +75,10 @@ function extend_to_edge(x1, y1, x2, y2) {
     }
   }
 
-  return Math.atan2(y1 + y * (min_len + max_len) / 2 - h / 2, x1 + x * (min_len + max_len) / 2 - w / 2) * 12 / Math.PI;
+  return Math.atan2(
+    y1 + y * (min_len + max_len) / 2 - h / 2,
+    x1 + x * (min_len + max_len) / 2 - w / 2,
+  ) * 12 / Math.PI;
 }
 
 
@@ -225,18 +228,16 @@ for(let min = 0; min < 1440; min += 5) {
 }
 
 // Upper plate meridian.
-{
-  const [ra1, dec1] = horizontal_to_equatorial(0, 0);
-  const [ra2, dec2] = horizontal_to_equatorial(180, 0);
-  const [x1, y1] = equatorial_to_cartesian(ra1, dec1);
-  const [x2, y2] = equatorial_to_cartesian(ra2, dec2);
-  console.log(
-    "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" stroke=\"red\" stroke-width=\"0.5\"/>",
-    x1,
-    y1,
-    x2,
-    y2,
-  );
+for(let lon = 0; lon < 360; lon += 90) {
+  let d = "M";
+
+  for(let lat = 0; lat <= 90; lat++) {
+    const [ra, dec] = horizontal_to_equatorial(lon, lat);
+    const [x, y] = equatorial_to_cartesian(ra, dec);
+    d += " " + x + " " + y;
+  }
+
+  console.log("<path d=\"%s\" fill=\"none\" stroke=\"red\" stroke-width=\"0.5\"/>", d);
 }
 
 console.log("</svg>");
