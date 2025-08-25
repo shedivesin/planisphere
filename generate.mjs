@@ -43,6 +43,41 @@ function equatorial_to_cartesian(ra, dec) {
   ];
 }
 
+// Extend the line from x1,y1 to x2,y2 until it intersects the edge of the
+// plate, and then return the RA of the point it intersected at.
+// FIXME: I use a derpy iterative method to approximate this. A real programmer
+// would use a line-circle intersection algorithm.
+function extend_to_edge(x1, y1, x2, y2) {
+  let x = x2 - x1;
+  let y = y2 - y1;
+
+  const d = Math.hypot(x, y);
+  x /= d;
+  y /= d;
+
+  let min_len = 0;
+  let min_d = Math.hypot((x1 + x * min_len) - w / 2, (x1 + y * min_len) - h / 2);
+
+  let max_len = (r - p * 2) * 2;
+  let max_d = Math.hypot((x1 + x * max_len) - w / 2, (x1 + y * max_len) - h / 2);
+
+  while(max_d - min_d >= 0.01) {
+    const mid_len = (min_len + max_len) / 2;
+    const mid_d = Math.hypot((x1 + x * mid_len) - w / 2, (x1 + y * mid_len) - h / 2);
+
+    if(mid_d <= r - p * 2) {
+      min_len = mid_len;
+      min_d = mid_d;
+    }
+    if(mid_d >= r - p * 2) {
+      max_len = mid_len;
+      max_d = mid_d;
+    }
+  }
+
+  return Math.atan2(y1 + y * (min_len + max_len) / 2 - h / 2, x1 + x * (min_len + max_len) / 2 - w / 2) * 12 / Math.PI;
+}
+
 
 import fs from "node:fs/promises";
 const STARS = (await fs.readFile("stars.csv", "utf8")).
@@ -75,7 +110,7 @@ console.log("<circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"white\" stroke=\"black\
 console.log("<circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"white\" stroke=\"black\"/>", w / 2, h / 2, r - p);
 
 // Celestial equator.
-// console.log("<circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"none\" stroke=\"black\" stroke-width=\"0.5\"/>", w / 2, h / 2, (r - p) * (90 - 0) / (180 - lat));
+// console.log("<circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"none\" stroke=\"black\" stroke-width=\"0.5\"/>", w / 2, h / 2, (r - p * 2) * (90 - 0) / (180 - lat));
 
 // Path of the ecliptic.
 {
@@ -93,23 +128,30 @@ console.log("<circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"white\" stroke=\"black\
 }
 
 // Ecliptic markers.
+const [ra_p, dec_p] = ecliptic_to_equatorial(0, 90);
+const [x_p, y_p] = equatorial_to_cartesian(ra_p, dec_p);
+
 for(let lon = 0; lon < 360; lon++) {
-  const [ra, dec] = ecliptic_to_equatorial(lon, 0);
   const len = (lon % 30 === 0)? 5/18: (lon % 10 === 0)? 1/2: (lon % 5 === 0)? 1/4: 1/8;
+
+  const [ra, dec] = ecliptic_to_equatorial(lon, 0);
+  const [x, y] = equatorial_to_cartesian(ra, dec);
+  const ra_t = extend_to_edge(x_p, y_p, x, y);
+
   console.log(
     "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" stroke=\"black\" stroke-width=\"0.5\"/>",
-    w / 2 + Math.cos(ra * Math.PI / 12) * (r - p),
-    h / 2 + Math.sin(ra * Math.PI / 12) * (r - p),
-    w / 2 + Math.cos(ra * Math.PI / 12) * (r - p * (1 - len)),
-    h / 2 + Math.sin(ra * Math.PI / 12) * (r - p * (1 - len)),
+    w / 2 + Math.cos(ra_t * Math.PI / 12) * (r - p),
+    h / 2 + Math.sin(ra_t * Math.PI / 12) * (r - p),
+    w / 2 + Math.cos(ra_t * Math.PI / 12) * (r - p * (1 - len)),
+    h / 2 + Math.sin(ra_t * Math.PI / 12) * (r - p * (1 - len)),
   );
 
   if(lon % 30 === 0) {
     console.log(
       "<text transform=\"translate(%d, %d) rotate(%d) translate(0, -3)\" text-anchor=\"middle\" font-family=\"Helvetica Neue\" font-size=\"12\" font-weight=\"300\">%s</text>",
-      w / 2 + Math.cos(ra * Math.PI / 12) * r,
-      h / 2 + Math.sin(ra * Math.PI / 12) * r,
-      lon - 90,
+      w / 2 + Math.cos(ra_t * Math.PI / 12) * r,
+      h / 2 + Math.sin(ra_t * Math.PI / 12) * r,
+      ra_t * 180 / 12 - 90,
       String.fromCharCode(9800 + Math.floor(lon / 30), 65038),
     );
   }
@@ -118,7 +160,7 @@ for(let lon = 0; lon < 360; lon++) {
 // Stars
 for(const [mag, ra, dec] of STARS) {
   const [x, y] = equatorial_to_cartesian(ra, dec);
-  if(Math.hypot(w / 2 - x, h / 2 - y) >= r - p) { continue; }
+  if(Math.hypot(w / 2 - x, h / 2 - y) >= r - p * 2) { continue; }
 
   const s = 6 * Math.pow(100, (STARS[0][0] - mag) / 10);
   console.log("<circle cx=\"%d\" cy=\"%d\" r=\"%d\"/>", x, y, s);
@@ -148,7 +190,7 @@ console.log(
 
 // Upper plate markers.
 for(let min = 0; min < 1440; min += 5) {
-  const len = (min % 60 === 0)? 9/18: (min % 30 === 0)? 0.5: (min % 15 === 0)? 0.25: 0.125;
+  const len = (min % 60 === 0)? 7/18: (min % 30 === 0)? 0.5: (min % 15 === 0)? 0.25: 0.125;
   console.log(
     "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" stroke=\"red\" stroke-width=\"0.5\"/>",
     w / 2 + Math.cos((lst * 60 + min) * Math.PI / 720) * (r - p * (1 + len)),
@@ -159,7 +201,7 @@ for(let min = 0; min < 1440; min += 5) {
 
   if(min % 60 === 0) {
     console.log(
-      "<text transform=\"translate(%d, %d) rotate(%d) translate(0, 1)\" text-anchor=\"middle\" dominant-baseline=\"hanging\" font-family=\"Helvetica Neue\" font-size=\"9\" font-weight=\"300\" fill=\"red\">%s</text>",
+      "<text transform=\"translate(%d, %d) rotate(%d) translate(0, 2)\" text-anchor=\"middle\" dominant-baseline=\"hanging\" font-family=\"Helvetica Neue\" font-size=\"9\" font-weight=\"300\" fill=\"red\">%s</text>",
       w / 2 + Math.cos((lst * 60 + min) * Math.PI / 720) * (r - p * 2),
       h / 2 + Math.sin((lst * 60 + min) * Math.PI / 720) * (r - p * 2),
       (lst * 60 + min) * 180 / 720 - 90,
