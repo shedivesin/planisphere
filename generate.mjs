@@ -51,11 +51,10 @@ function extend_to_edge(x1, y1, x2, y2) {
   let x = x2 - x1;
   let y = y2 - y1;
 
-  const d = Math.hypot(x, y);
-  x /= d;
-  y /= d;
+  let min_len = Math.hypot(x, y);
+  x /= min_len;
+  y /= min_len;
 
-  let min_len = 0;
   let min_d = Math.hypot((x1 + x * min_len) - w / 2, (x1 + y * min_len) - h / 2);
 
   let max_len = (r - p * 2) * 2;
