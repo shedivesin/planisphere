@@ -25,7 +25,7 @@ const lat = 38.87;
 const cos_lat = Math.cos(lat * Math.PI / 180);
 const sin_lat = Math.sin(lat * Math.PI / 180);
 // NB: Local sidereal time is arbitrary and controls the plate's rotation.
-const lst = 18;
+const lst = 0;
 function horizontal_to_equatorial([azi, alt]) {
   const cos_azi = Math.cos(azi * Math.PI / 180);
   const sin_azi = Math.sin(azi * Math.PI / 180);
@@ -278,5 +278,32 @@ console.log(
   w / 2 + Math.cos(lst * Math.PI / 12) * (r - p * 2),
   h / 2 + Math.sin(lst * Math.PI / 12) * (r - p * 2),
 );
+
+// Upper plate directional labels.
+{
+  for(const [name, azi] of [["W", 90], ["N", 180], ["E", 270]]) {
+    const [x, y] = equatorial_to_cartesian(horizontal_to_equatorial([azi, 0]));
+    const [x_0, y_0] = equatorial_to_cartesian(horizontal_to_equatorial([azi, 1]));
+    const [x_1, y_1] = equatorial_to_cartesian(horizontal_to_equatorial([azi, -1]));
+    const t = Math.atan2(y_1 - y_0, x_1 - x_0) * 180 / Math.PI;
+    const d = Math.hypot(y_1 - y_0, x_1 - x_0);
+
+    console.log(
+      "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" stroke=\"red\" stroke-width=\"0.5\"/>",
+      x,
+      y,
+      x + (x_1 - x_0) * p * 0.25 / d,
+      y + (y_1 - y_0) * p * 0.25 / d,
+    );
+
+    console.log(
+      "<text transform=\"translate(%d, %d) rotate(%d) translate(0, 2)\" text-anchor=\"middle\" dominant-baseline=\"hanging\" font-family=\"Helvetica Neue\" font-size=\"9\" font-weight=\"300\" fill=\"red\">%s</text>",
+      x + (x_1 - x_0) * p * 0.25 / d,
+      y + (y_1 - y_0) * p * 0.25 / d,
+      t - 90,
+      name,
+    );
+  }
+}
 
 console.log("</svg>");
