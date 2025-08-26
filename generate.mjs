@@ -271,4 +271,13 @@ for(let min = 0; min < 1440; min += 5) {
   }
 }
 
+// Upper plate meridian.
+console.log(
+  "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" stroke=\"red\" stroke-width=\"0.5\"/>",
+  w / 2 + Math.cos(lst * Math.PI / 12) * p,
+  h / 2 + Math.sin(lst * Math.PI / 12) * p, 
+  w / 2 + Math.cos(lst * Math.PI / 12) * (r - p * 2),
+  h / 2 + Math.sin(lst * Math.PI / 12) * (r - p * 2),
+);
+
 console.log("</svg>");
