@@ -25,7 +25,7 @@ const lat = 38.87;
 const cos_lat = Math.cos(lat * Math.PI / 180);
 const sin_lat = Math.sin(lat * Math.PI / 180);
 // NB: Local sidereal time is arbitrary and controls the plate's rotation.
-const lst = 7.655;
+const lst = 18;
 function horizontal_to_equatorial([azi, alt]) {
   const cos_azi = Math.cos(azi * Math.PI / 180);
   const sin_azi = Math.sin(azi * Math.PI / 180);
@@ -161,32 +161,31 @@ for(const line of (await fs.readFile("stars.csv", "utf8")).trim().split("\n")) {
 }
 
 // Labels
-// FIXME: Rats, these are upside down.
 for(const [name, ra, dec, u, v] of [
-  ["Pleiades",    3.7914,  24.1051,  17.5,  1  ],
-  ["Aldebaran",   4.5987,  16.5093,  -3.5,  6.5],
-  ["Rigel",       5.2423,  -8.2016,  12  ,  2.5],
-  ["Capella",     5.2782,  45.9980,  -2  , -6.5],
-  ["Betelgeuse",  5.9195,   7.4071, -10  ,  6  ],
-  ["Sirius",      6.7525, -16.7161, -17  ,  0.5],
-  ["Dioscuri",    7.6659,  29.9573,  -1.5, -8  ],
-  ["Procyon",     7.6550,   5.2250,   0  , -8  ],
-  ["Regulus",    10.1395,  11.9672,   6  ,  7  ],
-  ["Spica",      13.4199, -11.1613,   0  ,  8  ],
-  ["Alkaid",     13.7923,  49.3133,   0  ,  6  ],
-  ["Arcturus",   14.2610,  19.1824,   6  ,  8  ],
-  ["Antares",    16.4901, -26.4320,   2  ,  8  ],
-  ["Vega",       18.6156,  38.7837,   0  , -8  ],
-  ["Altair",     19.8464,   8.8683,   0  , -7  ],
-  ["Deneb",      20.6905,  45.2803,  -7  , -5.5],
-  ["Fomalhaut",  22.9608, -29.6222,   0  ,  7  ],
+  ["Pleiades",    3.7914,  24.1051, -18, 0],
+  ["Aldebaran",   4.5987,  16.5093, 4.5, -6.5],
+  ["Rigel",       5.2423,  -8.2016, -14, 1],
+  ["Capella",     5.2782,  45.9980, -1.3, 6.5],
+  ["Betelgeuse",  5.9195,   7.4071, 15, -7],
+  ["Sirius",      6.7525, -16.7161, -6, -10],
+  ["Dioscuri",    7.6659,  29.9573, 2, 9],
+  ["Procyon",     7.6550,   5.2250, 1, -7],
+  ["Regulus",    10.1395,  11.9672, -2, -7],
+  ["Spica",      13.4199, -11.1613, 0, -7],
+  ["Alkaid",     13.7923,  49.3133, 0, -6],
+  ["Arcturus",   14.2610,  19.1824, -7, -8],
+  ["Antares",    16.4901, -26.4320, -2, -7],
+  ["Vega",       18.6156,  38.7837, 0, 8],
+  ["Altair",     19.8464,   8.8683, 0, 8],
+  ["Deneb",      20.6905,  45.2803, 8, 8],
+  ["Fomalhaut",  22.9608, -29.6222, 0, -7],
 ]) {
   const [x, y] = equatorial_to_cartesian([ra, dec]);
   console.log(
     "<text transform=\"translate(%d, %d) rotate(%d) translate(%d, %d)\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Helvetica Neue\" font-size=\"8\" font-weight=\"300\">%s</text>",
     x,
     y,
-    ra * 15 - 90,
+    ra * 15 + 90,
     u,
     v,
     name,
