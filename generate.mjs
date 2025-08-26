@@ -169,7 +169,25 @@ for(const [mag, ra, dec] of STARS) {
 }
 
 // Labels
-for(const [name, ra, dec, u, v] of LABELS) {
+for(const [name, ra, dec, u, v] of [
+  ["Pleiades",    3.7914,  24.1051,   0  ,  -4.5],
+  ["Aldebaran",   4.5987,  16.5093,  -2  ,   6.5],
+  ["Rigel",       5.2423,  -8.2016,  -2  ,   7  ],
+  ["Capella",     5.2782,  45.9980,   0  ,  -7  ],
+  ["Betelgeuse",  5.9195,   7.4071, -23  ,   0  ],
+  ["Sirius",      6.7525, -16.7161,   0  , -10  ],
+  ["Dioscuri",    7.6659,  29.9573,   5  , -11.5],
+  ["Procyon",     7.6550,   5.2250,   0  ,  -8.5],
+  ["Regulus",    10.1395,  11.9672,  15  ,   8  ],
+  ["Spica",      13.4199, -11.1613,  -3  ,   8  ],
+  ["Alkaid",     13.7923,  49.3133,  13  ,   1  ],
+  ["Arcturus",   14.2610,  19.1824, -18.5,   0  ],
+  ["Antares",    16.4901, -26.4320,  10  ,  11  ],
+  ["Vega",       18.6156,  38.7837,   0  ,  -8  ],
+  ["Altair",     19.8464,   8.8683,   1  ,  -7  ],
+  ["Deneb",      20.6905,  45.2803,  -5  ,  -6  ],
+  ["Fomalhaut",  22.9608, -29.6222,   0  ,   6.5],
+]) {
   const [x, y] = equatorial_to_cartesian(ra, dec);
   console.log(
     "<text transform=\"translate(%d, %d) rotate(%d) translate(%d, %d)\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Helvetica Neue\" font-size=\"8\" font-weight=\"300\">%s</text>",
