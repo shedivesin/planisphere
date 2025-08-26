@@ -10,7 +10,7 @@ const p = 18;
 const e = 23.435; // For equinox 2030.
 const cos_e = Math.cos(e * Math.PI / 180);
 const sin_e = Math.sin(e * Math.PI / 180);
-function ecliptic_to_equatorial(lon, lat) {
+function ecliptic_to_equatorial([lon, lat]) {
   const cos_lon = Math.cos(lon * Math.PI / 180);
   const sin_lon = Math.sin(lon * Math.PI / 180);
   const cos_lat = Math.cos(lat * Math.PI / 180);
@@ -26,7 +26,7 @@ const cos_lat = Math.cos(lat * Math.PI / 180);
 const sin_lat = Math.sin(lat * Math.PI / 180);
 // NB: Local sidereal time is arbitrary and controls the plate's rotation.
 const lst = 7.655;
-function horizontal_to_equatorial(azi, alt) {
+function horizontal_to_equatorial([azi, alt]) {
   const cos_azi = Math.cos(azi * Math.PI / 180);
   const sin_azi = Math.sin(azi * Math.PI / 180);
   const cos_alt = Math.cos(alt * Math.PI / 180);
@@ -38,7 +38,7 @@ function horizontal_to_equatorial(azi, alt) {
   ];
 }
 
-function equatorial_to_cartesian(ra, dec) {
+function equatorial_to_cartesian([ra, dec]) {
   // Polar azimuthal.
   return [
     w / 2 + Math.cos(ra * Math.PI / 12) * (r - p * 2) * (90 - dec) / (180 - lat),
@@ -83,12 +83,25 @@ function extend_to_edge(x1, y1, x2, y2) {
   ) * 12 / Math.PI;
 }
 
+function lerp(a, b, t) {
+  return a * (1 - t) + b * t;
+}
+
+// Return the point on the line through P1 and P2 that is closest to P3.
+function nearest_point_on_line(x1, y1, x2, y2, x3, y3) {
+  const t = ((x3 - x1) * (x2 - x1) + (y3 - y1) * (y2 - y1)) / ((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+  return [x1 + (x2 - x1) * t, y1 + (y2 - y1) * t];
+}
+
 
 console.log("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\">", w, h);
 
 // Outer circle.
 console.log("<circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"white\" stroke=\"black\"/>", w / 2, h / 2, r);
 console.log("<circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"white\" stroke=\"black\"/>", w / 2, h / 2, r - p);
+
+// Lower plate pivot.
+console.log("<circle cx=\"%d\" cy=\"%d\" r=\"1\"/>", w / 2, h / 2);
 
 // Celestial equator.
 // console.log("<circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"none\" stroke=\"black\" stroke-width=\"0.5\"/>", w / 2, h / 2, (r - p * 2) * (90 - 0) / (180 - lat));
@@ -98,8 +111,7 @@ console.log("<circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"white\" stroke=\"black\
   let d = "M";
 
   for(let lon = 0; lon < 360; lon++) {
-    const [ra, dec] = ecliptic_to_equatorial(lon, 0);
-    const [x, y] = equatorial_to_cartesian(ra, dec);
+    const [x, y] = equatorial_to_cartesian(ecliptic_to_equatorial([lon, 0]));
     d += " " + x + " " + y;
   }
 
@@ -109,14 +121,12 @@ console.log("<circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"white\" stroke=\"black\
 }
 
 // Ecliptic markers.
-const [ra_p, dec_p] = ecliptic_to_equatorial(0, 90);
-const [x_p, y_p] = equatorial_to_cartesian(ra_p, dec_p);
+const [x_p, y_p] = equatorial_to_cartesian(ecliptic_to_equatorial([0, 90]));
 
 for(let lon = 0; lon < 360; lon++) {
   const len = (lon % 30 === 0)? 5/18: (lon % 10 === 0)? 1/2: (lon % 5 === 0)? 1/4: 1/8;
 
-  const [ra, dec] = ecliptic_to_equatorial(lon, 0);
-  const [x, y] = equatorial_to_cartesian(ra, dec);
+  const [x, y] = equatorial_to_cartesian(ecliptic_to_equatorial([lon, 0]));
   const ra_t = extend_to_edge(x_p, y_p, x, y);
 
   console.log(
@@ -141,8 +151,9 @@ for(let lon = 0; lon < 360; lon++) {
 // Stars
 for(const line of (await fs.readFile("stars.csv", "utf8")).trim().split("\n")) {
   const [mag, ra, dec] = line.split(",").map(parseFloat);
-  const [x, y] = equatorial_to_cartesian(ra, dec);
-  if(Math.hypot(w / 2 - x, h / 2 - y) >= r - p * 2) { continue; }
+  const [x, y] = equatorial_to_cartesian([ra, dec]);
+  const d = Math.hypot(w / 2 - x, h / 2 - y);
+  if(!(d >= p && d <= r - p * 2)) { continue; }
 
   // NB: -1.44 is our brightest star, Sirius.
   const s = 6 * Math.pow(100, (-1.44 - mag) / 10);
@@ -150,26 +161,27 @@ for(const line of (await fs.readFile("stars.csv", "utf8")).trim().split("\n")) {
 }
 
 // Labels
+// FIXME: Rats, these are upside down.
 for(const [name, ra, dec, u, v] of [
-  ["Pleiades",    3.7914,  24.1051,   0  ,  -4.5],
-  ["Aldebaran",   4.5987,  16.5093,  -2  ,   6.5],
-  ["Rigel",       5.2423,  -8.2016,  -2  ,   7  ],
-  ["Capella",     5.2782,  45.9980,   0  ,  -7  ],
-  ["Betelgeuse",  5.9195,   7.4071, -23  ,   0  ],
-  ["Sirius",      6.7525, -16.7161,   0  , -10  ],
-  ["Dioscuri",    7.6659,  29.9573,   5  , -11.5],
-  ["Procyon",     7.6550,   5.2250,   0  ,  -8.5],
-  ["Regulus",    10.1395,  11.9672,  15  ,   8  ],
-  ["Spica",      13.4199, -11.1613,  -3  ,   8  ],
-  ["Alkaid",     13.7923,  49.3133,  13  ,   1  ],
-  ["Arcturus",   14.2610,  19.1824, -18.5,   0  ],
-  ["Antares",    16.4901, -26.4320,  10  ,  11  ],
-  ["Vega",       18.6156,  38.7837,   0  ,  -8  ],
-  ["Altair",     19.8464,   8.8683,   1  ,  -7  ],
-  ["Deneb",      20.6905,  45.2803,  -5  ,  -6  ],
-  ["Fomalhaut",  22.9608, -29.6222,   0  ,   6.5],
+  ["Pleiades",    3.7914,  24.1051,  17.5,  1  ],
+  ["Aldebaran",   4.5987,  16.5093,  -3.5,  6.5],
+  ["Rigel",       5.2423,  -8.2016,  12  ,  2.5],
+  ["Capella",     5.2782,  45.9980,  -2  , -6.5],
+  ["Betelgeuse",  5.9195,   7.4071, -10  ,  6  ],
+  ["Sirius",      6.7525, -16.7161, -17  ,  0.5],
+  ["Dioscuri",    7.6659,  29.9573,  -1.5, -8  ],
+  ["Procyon",     7.6550,   5.2250,   0  , -8  ],
+  ["Regulus",    10.1395,  11.9672,   6  ,  7  ],
+  ["Spica",      13.4199, -11.1613,   0  ,  8  ],
+  ["Alkaid",     13.7923,  49.3133,   0  ,  6  ],
+  ["Arcturus",   14.2610,  19.1824,   6  ,  8  ],
+  ["Antares",    16.4901, -26.4320,   2  ,  8  ],
+  ["Vega",       18.6156,  38.7837,   0  , -8  ],
+  ["Altair",     19.8464,   8.8683,   0  , -7  ],
+  ["Deneb",      20.6905,  45.2803,  -7  , -5.5],
+  ["Fomalhaut",  22.9608, -29.6222,   0  ,  7  ],
 ]) {
-  const [x, y] = equatorial_to_cartesian(ra, dec);
+  const [x, y] = equatorial_to_cartesian([ra, dec]);
   console.log(
     "<text transform=\"translate(%d, %d) rotate(%d) translate(%d, %d)\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Helvetica Neue\" font-size=\"8\" font-weight=\"300\">%s</text>",
     x,
@@ -188,6 +200,9 @@ console.log(
   h / 2,
   r - p,
 );
+
+// Upper plate pivot.
+console.log("<circle cx=\"%d\" cy=\"%d\" r=\"1\" fill=\"red\"/>", w / 2, h / 2);
 
 // Upper plate markers.
 for(let min = 0; min < 1440; min += 5) {
@@ -211,31 +226,49 @@ for(let min = 0; min < 1440; min += 5) {
   }
 }
 
-// Upper plate horizon.
+// Upper plate window.
 {
-  let d = "M";
+  // FIXME: Found manually for p=18. Use an iterative method so we can vary p.
+  const max_azi = 156.55285;
 
-  for(let azi = 0; azi < 360; azi++) {
-    const [ra, dec] = horizontal_to_equatorial(azi, 0);
-    const [x, y] = equatorial_to_cartesian(ra, dec);
-    d += " " + x + " " + y;
+  const [x1, y1] = nearest_point_on_line(
+    ...equatorial_to_cartesian(horizontal_to_equatorial([-max_azi,  0])),
+    ...equatorial_to_cartesian(horizontal_to_equatorial([-max_azi, 90])),
+    w / 2,
+    h / 2,
+  );
+  const [x2, y2] = nearest_point_on_line(
+    ...equatorial_to_cartesian(horizontal_to_equatorial([+max_azi,  0])),
+    ...equatorial_to_cartesian(horizontal_to_equatorial([+max_azi, 90])),
+    w / 2,
+    h / 2,
+  );
+  const tics = Math.round(max_azi * 2);
+
+  {
+    let d = "M" + x1 + " " + y1;
+
+    for(let i = 0; i <= tics; i++) {
+      const azi = lerp(-max_azi, max_azi, i / tics);
+      const [x, y] = equatorial_to_cartesian(horizontal_to_equatorial([azi, 0]));
+      d += " " + x + " " + y;
+    }
+
+    d += " " + x2 + " " + y2 + "A" + p + " " + p + " 0 0 1 " + x1 + " " + y1 + "Z";
+    console.log("<path d=\"%s\" fill=\"none\" stroke=\"red\"/>", d);
   }
 
-  d += "Z";
-  console.log("<path d=\"%s\" fill=\"none\" stroke=\"red\"/>", d);
-}
+  {
+    let d = "M";
 
-// Upper plate meridian.
-for(let lon = 0; lon < 360; lon += 90) {
-  let d = "M";
+    for(let i = 0; i <= 360 - tics; i++) {
+      const azi = lerp(max_azi, 360 - max_azi, i / (360 - tics));
+      const [x, y] = equatorial_to_cartesian(horizontal_to_equatorial([azi, 0]));
+      d += " " + x + " " + y;
+    }
 
-  for(let lat = 0; lat <= 90; lat++) {
-    const [ra, dec] = horizontal_to_equatorial(lon, lat);
-    const [x, y] = equatorial_to_cartesian(ra, dec);
-    d += " " + x + " " + y;
+    console.log("<path d=\"%s\" fill=\"none\" stroke=\"red\" stroke-width=\"0.5\"/>", d);
   }
-
-  console.log("<path d=\"%s\" fill=\"none\" stroke=\"red\" stroke-width=\"0.5\"/>", d);
 }
 
 console.log("</svg>");
