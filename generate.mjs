@@ -1,3 +1,6 @@
+import fs from "node:fs/promises";
+
+
 const w = 432;
 const h = 432;
 const r = 215.5;
@@ -81,30 +84,6 @@ function extend_to_edge(x1, y1, x2, y2) {
 }
 
 
-import fs from "node:fs/promises";
-const STARS = (await fs.readFile("stars.csv", "utf8")).
-  trim().
-  split("\n").
-  map(x => {
-    x = x.split(",");
-    x[0] = +x[0];
-    x[1] = +x[1];
-    x[2] = +x[2];
-    return x;
-  });
-const LABELS = (await fs.readFile("labels.csv", "utf8")).
-  trim().
-  split("\n").
-  map(x => {
-    x = x.split(",");
-    x[1] = +x[1];
-    x[2] = +x[2];
-    x[3] = +x[3];
-    x[4] = +x[4];
-    return x;
-  });
-
-
 console.log("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\">", w, h);
 
 // Outer circle.
@@ -160,11 +139,13 @@ for(let lon = 0; lon < 360; lon++) {
 }
 
 // Stars
-for(const [mag, ra, dec] of STARS) {
+for(const line of (await fs.readFile("stars.csv", "utf8")).trim().split("\n")) {
+  const [mag, ra, dec] = line.split(",").map(parseFloat);
   const [x, y] = equatorial_to_cartesian(ra, dec);
   if(Math.hypot(w / 2 - x, h / 2 - y) >= r - p * 2) { continue; }
 
-  const s = 6 * Math.pow(100, (STARS[0][0] - mag) / 10);
+  // NB: -1.44 is our brightest star, Sirius.
+  const s = 6 * Math.pow(100, (-1.44 - mag) / 10);
   console.log("<circle cx=\"%d\" cy=\"%d\" r=\"%d\"/>", x, y, s);
 }
 

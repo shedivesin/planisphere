@@ -5,20 +5,25 @@ function longitude(date) {
   return 280.459 + 0.98564736 * d + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g);
 }
 
-function zodiac(longitude) {
-  const t = Math.round(longitude * 60) % 21600;
-  const minute = t % 60;
-  const degree = Math.floor(t / 60) % 30;
-  const zodiac = Math.floor(t / 1800);
-  return degree.toString().padStart(2, "0") +
-    String.fromCharCode(9800 + zodiac, 65038) +
-    minute.toString().padStart(2, "0");
+const year  = 2025;
+const date  = new Date(year, 0, 1, 12);
+const table = new Array(12 * 31).fill("    ");
+while(date.getFullYear() === year) {
+  const lon = Math.round(longitude(date.getTime())) % 360;
+  table[(date.getDate() - 1) * 12 + date.getMonth()] = String.fromCharCode(
+    48 + Math.floor(lon / 10) % 3,
+    48 + lon % 10,
+    9800 + Math.floor(lon / 30),
+    65038,
+  );
+  date.setDate(date.getDate() + 1);
 }
 
-function print(date) {
-  console.log("%s\t%s", new Date(date).toISOString(), zodiac(longitude(date)));
-}
-
-for(let i = 0, date = Date.now(); i < 20; i++, date += 86400000) {
-  print(date);
+console.log("    Jan  Feb  Mar  Apr  May  Jun  Jul  Aug  Sep  Oct  Nov  Dec");
+for(let i = 0; i < 31; i++) {
+  console.log(
+    "%s  %s",
+    (i + 1).toString().padStart(2, "0"),
+    table.slice(i * 12, i * 12 + 12).join(" "),
+  );
 }
