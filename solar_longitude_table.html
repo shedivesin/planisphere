@@ -1,0 +1,45 @@
+<!doctype html>
+<style>body{font-family:"Helvetica Neue";}table{border-collapse:collapse;margin:6em auto}th,td{text-align:center;vertical-align:top;line-height:1.25em;padding-right:1em}tr>:last-child{padding-right:0}caption{font-weight:bold}</style>
+
+<script>
+// https://aa.usno.navy.mil/faq/sun_approx
+function longitude(date) {
+  const d = (date - 946728000000) / 86400000;
+  const g = (357.529 * Math.PI / 180) + (0.98560028 * Math.PI / 180) * d;
+  return 280.459 + 0.98564736 * d + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g);
+}
+
+const year  = 2025;
+const date  = new Date(year, 0, 1, 12);
+const offset = date.getTimezoneOffset();
+const table = new Array(12 * 31).fill("");
+while(date.getFullYear() === year) {
+  let lon = Math.round(longitude(date.getTime()));
+  lon -= Math.floor(lon / 360) * 360;
+
+  let str = String.fromCharCode(
+    48 + Math.floor(lon / 10) % 3,
+    48 + lon % 10,
+    9800 + Math.floor(lon / 30),
+    65038,
+  );
+  if(date.getTimezoneOffset() !== offset) {
+    str = "<u>" + str + "</u>";
+  }
+
+  table[(date.getDate() - 1) * 12 + date.getMonth()] = str;
+  date.setDate(date.getDate() + 1);
+}
+
+document.write("<table><caption>" + year + "</caption><tr><th><th>Jan<th>Feb<th>Mar<th>Apr<th>May<th>Jun<th>Jul<th>Aug<th>Sep<th>Oct<th>Nov<th>Dec");
+
+for(let i = 0, k = 0; i < 31; i++) {
+  document.write("<tr><th>" + (i + 1).toString().padStart(2, "0"));
+
+  for(let j = 0; j < 12; j++, k++) {
+    document.write("<td>" + table[k]);
+  }
+}
+
+document.write("</table>");
+</script>
